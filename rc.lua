@@ -1,9 +1,13 @@
+-- =====================================================
+-- COMPLETE RC.LUA FOR AWESOMEWM
+-- =====================================================
 local gears = require("gears")
 local awful = require("awful")
 require("awful.autofocus")
 local beautiful = require("beautiful")
 local dpi = require("beautiful.xresources").apply_dpi
 
+-- Terminal and modkey
 local terminal = "kitty"
 local modkey = "Mod4"
 
@@ -106,12 +110,16 @@ end
 
 awful.layout.layouts = { custom_tile }
 
--- Tags
+-- ===========================================
+-- TAGS
+-- ===========================================
 awful.screen.connect_for_each_screen(function(s)
     awful.tag({ "1","2","3","4","5" }, s, awful.layout.layouts[1])
 end)
 
--- Client signals
+-- ===========================================
+-- CLIENT SIGNALS
+-- ===========================================
 client.connect_signal("manage", function(c)
     if c.class == "Polybar" then
         c.floating, c.ontop, c.above, c.skip_taskbar, c.sticky, c.border_width = true, true, true, true, true, 0
@@ -132,7 +140,9 @@ client.connect_signal("unfocus", function(c)
     if c.class ~= "Polybar" then c.border_color = beautiful.border_normal end
 end)
 
--- Keybindings
+-- ===========================================
+-- KEYBINDINGS
+-- ===========================================
 globalkeys = gears.table.join(
     awful.key({modkey}, "Return", function() awful.spawn(terminal) end),
     awful.key({modkey}, "b", function() awful.spawn("firefox") end),
@@ -141,7 +151,16 @@ globalkeys = gears.table.join(
     awful.key({modkey}, "k", function() awful.client.focus.byidx(-1) end),
     awful.key({modkey}, "q", function() if client.focus then client.focus:kill() end end),
     awful.key({modkey, "Control"}, "r", awesome.restart),
-    awful.key({modkey, "Shift"}, "l", function() awesome.quit() end)
+    awful.key({modkey, "Shift"}, "l", function() awesome.quit() end),
+
+    -- Maximize active window
+    awful.key({modkey}, "f", function()
+        local c = client.focus
+        if c then
+            c.maximized = not c.maximized
+            c:raise()
+        end
+    end, {description = "toggle maximized", group = "client"})
 )
 
 for i = 1,5 do
@@ -154,16 +173,55 @@ for i = 1,5 do
     )
 end
 
+-- ===========================================
+-- SWAP FULL-SIZE WINDOWS
+-- ===========================================
+local function swap_full(dir)
+    local c = client.focus
+    if not c then return end
+
+    local target
+    if dir == "right" then
+        target = awful.client.next(1)
+    elseif dir == "left" then
+        target = awful.client.next(-1)
+    end
+
+    if not target then return end
+
+    -- Save geometries
+    local geo_c = c:geometry()
+    local geo_t = target:geometry()
+
+    -- Swap positions and sizes
+    c:geometry(geo_t)
+    target:geometry(geo_c)
+
+    -- Swap in layout
+    c:swap(target)
+end
+
+globalkeys = gears.table.join(globalkeys,
+    awful.key({modkey, "Shift"}, "Right", function() swap_full("right") end,
+        {description = "swap full-size with next window", group = "client"}),
+    awful.key({modkey, "Shift"}, "Left", function() swap_full("left") end,
+        {description = "swap full-size with previous window", group = "client"})
+)
+
 root.keys(globalkeys)
 
--- Mouse bindings
+-- ===========================================
+-- MOUSE BINDINGS
+-- ===========================================
 clientbuttons = gears.table.join(
     awful.button({}, 1, function(c) c:emit_signal("request::activate","mouse_click",{raise=true}) end),
     awful.button({modkey},1,function(c) c:activate{context="mouse_click",action="mouse_move"} end),
     awful.button({modkey},3,function(c) c:activate{context="mouse_click",action="mouse_resize"} end)
 )
 
--- Rules
+-- ===========================================
+-- RULES
+-- ===========================================
 awful.rules.rules = {
     {
         rule = {},
